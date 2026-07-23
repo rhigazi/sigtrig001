@@ -114,11 +114,29 @@ Die **regulären US-Handelszeiten (RTH)** sind von **09:30 bis 16:00 Uhr Eastern
   - Handelszeit: **14:30 bis 21:00 Uhr UTC**
   - Deutsche Zeit (MEZ): **15:30 bis 22:00 Uhr** (da auch in Deutschland umgestellt wird)
 
-Der vordefinierte Cron-Job läuft ganzjährig im Intervall **13:00 bis 21:00 UTC** (Mo-Fr) alle 15 Minuten, womit die Handelszeiten zu jeder Jahreszeit lückenlos abgedeckt sind:
+### Optimierte Ausführung (Vermeidung von GitHub-Verzögerungen)
+GitHub Actions startet Cron-Jobs oft verspätet, wenn sie zu vollen Viertelstunden (`*/15` -> `00`, `15`, `30`, `45`) laufen, da die globale Serverlast dann am höchsten ist.
+
+Daher ist unser Workflow auf **krumme Minuten** (`7`, `22`, `37`, `52`) eingestellt, um Verzögerungen in der Warteschlange drastisch zu minimieren:
 ```yaml
 on:
   schedule:
-    # Mo-Fr alle 15 Minuten zwischen 13:00 und 21:00 UTC (deckt ganzjährig 09:30-16:00 Uhr ET ab)
-    - cron: '*/15 13-21 * * 1-5'
+    # Läuft zur Minute 7, 22, 37, 52 (deutlich weniger Serverlast auf GitHub)
+    - cron: '7,22,37,52 13-21 * * 1-5'
 ```
-Du kannst den Workflow auch jederzeit manuell im GitHub-Tab **Actions** über den Button **Run workflow** starten.
+
+### Optionale Lösung für 100% Pünktlichkeit (Externer Cron)
+Wenn du absolut sekundengenaue und zuverlässige Trigger benötigst, kannst du den GitHub Scheduler umgehen und einen kostenlosen externen Dienst wie **cron-job.org** oder **UptimeRobot** verwenden:
+
+1. Erstelle ein **Personal Access Token (PAT)** mit `workflow`-Berechtigung in deinem GitHub-Profil.
+2. Richte bei dem externen Dienst einen Cron-Job ein, der alle 15 Minuten einen `POST`-Request an die GitHub API sendet, um das `workflow_dispatch`-Event deines Repositories auszulösen:
+
+```http
+POST https://api.github.com/repos/DEIN_GITHUB_USER/DEIN_REPO_NAME/actions/workflows/market_monitor.yml/dispatches
+Headers:
+  Authorization: Bearer DEIN_GITHUB_PAT
+  Accept: application/vnd.github+json
+Body (JSON):
+  { "ref": "main" }
+```
+Dadurch startet der Workflow jedes Mal pünktlich auf die Sekunde genau!
