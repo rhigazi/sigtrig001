@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 from alpaca.data.historical import StockHistoricalDataClient
 from alpaca.data.requests import StockLatestTradeRequest
 from alpaca.trading.client import TradingClient
+from alpaca.data.enums import DataFeed
 
 def load_config(filepath="config.csv"):
     if not os.path.exists(filepath):
@@ -76,13 +77,13 @@ def is_market_open(trading_client) -> bool:
         print(f"Error fetching market clock: {e}")
         return False
 
-def fetch_latest_trades(data_client, tickers):
+def fetch_latest_trades(data_client, tickers, feed: DataFeed = DataFeed.IEX):
     prices = {}
     failed_tickers = []
 
     # Try fetching as a batch first
     try:
-        request_params = StockLatestTradeRequest(symbol_or_symbols=tickers)
+        request_params = StockLatestTradeRequest(symbol_or_symbols=tickers, feed=feed)
         latest_trades = data_client.get_stock_latest_trade(request_params)
         for ticker in tickers:
             if latest_trades and ticker in latest_trades:
@@ -94,7 +95,7 @@ def fetch_latest_trades(data_client, tickers):
         # Fallback to single queries
         for ticker in tickers:
             try:
-                request_params = StockLatestTradeRequest(symbol_or_symbols=[ticker])
+                request_params = StockLatestTradeRequest(symbol_or_symbols=[ticker], feed=feed)
                 latest_trades = data_client.get_stock_latest_trade(request_params)
                 if latest_trades and ticker in latest_trades:
                     prices[ticker] = float(latest_trades[ticker].price)
@@ -155,7 +156,18 @@ def run_monitor(config_path="config.csv"):
         print("No active tickers found.")
         return
 
-    prices, failed_tickers = fetch_latest_trades(data_client, active_tickers)
+    # Get configuration for Alpaca data feed (default to IEX for Free plan)
+    feed_str = os.getenv("ALPACA_FEED", "IEX").upper()
+    if feed_str == "SIP":
+        feed = DataFeed.SIP
+    elif feed_str == "DELAYED_SIP":
+        feed = DataFeed.DELAYED_SIP
+    elif feed_str == "OTC":
+        feed = DataFeed.OTC
+    else:
+        feed = DataFeed.IEX
+
+    prices, failed_tickers = fetch_latest_trades(data_client, active_tickers, feed=feed)
 
     for ticker in failed_tickers:
         err_msg = (

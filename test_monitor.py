@@ -3,6 +3,7 @@ import unittest
 from unittest.mock import patch, MagicMock
 import datetime
 import monitor
+from alpaca.data.enums import DataFeed
 
 class TestMonitor(unittest.TestCase):
 
@@ -115,7 +116,8 @@ class TestMonitor(unittest.TestCase):
             "ALPACA_SECRET_KEY": "fake_secret",
             "TELEGRAM_BOT_TOKEN": "fake_token",
             "TELEGRAM_CHAT_ID": "fake_chat_id",
-            "BYPASS_MARKET_OPEN_CHECK": "False"
+            "BYPASS_MARKET_OPEN_CHECK": "False",
+            "ALPACA_FEED": "IEX"
         }
 
         with patch.dict(os.environ, env, clear=True):
@@ -123,6 +125,10 @@ class TestMonitor(unittest.TestCase):
 
         mock_is_market_open.assert_called_once()
         self.assertEqual(mock_send.call_count, 2)
+
+        # Verify that get_stock_latest_trade was called with feed=DataFeed.IEX
+        call_arg = mock_data_inst.get_stock_latest_trade.call_args[0][0]
+        self.assertEqual(call_arg.feed, DataFeed.IEX)
 
         # Verify rows was updated
         self.assertEqual(rows[0]["Last_Price"], "165.00")
@@ -164,11 +170,16 @@ class TestMonitor(unittest.TestCase):
             "TELEGRAM_BOT_TOKEN": "fake_token",
             "TELEGRAM_CHAT_ID": "fake_chat_id",
             "BYPASS_MARKET_OPEN_CHECK": "True",
-            "COOLDOWN_HOURS": "2.0"
+            "COOLDOWN_HOURS": "2.0",
+            "ALPACA_FEED": "SIP"
         }
 
         with patch.dict(os.environ, env, clear=True):
             monitor.run_monitor()
+
+        # Verify feed parameter was set to DataFeed.SIP
+        call_arg = mock_data_inst.get_stock_latest_trade.call_args[0][0]
+        self.assertEqual(call_arg.feed, DataFeed.SIP)
 
         # No alert sent due to cooldown
         mock_send.assert_not_called()

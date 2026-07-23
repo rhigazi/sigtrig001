@@ -1,6 +1,6 @@
 # Alpaca US-Markt Limit-Überwachungssystem (Market Monitor)
 
-Ein performantes, stabiles und kostengünstiges Überwachungssystem, das alle 15 Minuten während der US-Handelszeiten (RTH) die Kurse der in `config.csv` definierten Werte via **Alpaca Market API** prüft, Schwellenwert-Brüche (Ober-/Untergrenzen) identifiziert und **Telegram-Benachrichtigungen** verschickt.
+Ein performantes, stabile und kostengünstiges Überwachungssystem, das alle 15 Minuten während der US-Handelszeiten (RTH) die Kurse der in `config.csv` definierten Werte via **Alpaca Market API** prüft, Schwellenwert-Brüche (Ober-/Untergrenzen) identifiziert und **Telegram-Benachrichtigungen** verschickt.
 
 Der aktuelle Zustand (letzter Preis & Auslösezeitpunkt) wird automatisch wieder in der Datei `config.csv` im Repository gespeichert.
 
@@ -10,6 +10,7 @@ Der aktuelle Zustand (letzter Preis & Auslösezeitpunkt) wird automatisch wieder
 
 - **Automatisierte Ausführung:** Ein GitHub Actions Workflow führt das Skript alle 15 Minuten (Mo–Fr, 13:30 bis 21:00 UTC) aus.
 - **Fehlertoleranz:** Scheitert das Laden eines Tickers bei Alpaca, erhältst du eine Warnung über Telegram, und andere Werte werden normal weitergeprüft.
+- **Alpaca Free-Plan Kompatibilität (IEX Feed):** Standardmäßig nutzt das Skript den **IEX**-Datenfeed (Investoren-Börse), welcher für kostenlose Alpaca-Konten (Free Plan / Paper Trading) freigeschaltet ist und keine `403 Forbidden` Fehler wirft. Bei bezahlten Konten kann flexibel auf den unlimitierten **SIP**-Feed umgestellt werden.
 - **Hysterese & Cooldown:** Um Spam-Nachrichten zu vermeiden, gibt es einen standardmäßigen **2-Stunden-Cooldown** pro Ticker (über `COOLDOWN_HOURS` einstellbar).
 - **Zustands-Synchronisierung:** Letzte Kurse (`Last_Price`) und Alarm-Zeitstempel (`Last_Triggered`) werden zurück ins Repository gepusht.
 - **Wochenend-Schutz:** Das Skript bricht außerhalb der US-Marktzeiten automatisch ab, um API-Abfragen zu sparen.
@@ -75,6 +76,9 @@ ALPACA_API_KEY=dein_alpaca_key
 ALPACA_SECRET_KEY=dein_alpaca_secret
 TELEGRAM_BOT_TOKEN=dein_telegram_token
 TELEGRAM_CHAT_ID=deine_chat_id
+
+# Daten-Feed Konfiguration (Standard: IEX für Free Plan; SIP für unlimitierte Paid Plans)
+ALPACA_FEED=IEX
 
 # Für lokales Testen am Wochenende oder außerhalb der US-Handelszeiten:
 BYPASS_MARKET_OPEN_CHECK=True
