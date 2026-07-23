@@ -1,0 +1,54 @@
+name: Alpaca Market Monitor
+
+on:
+  schedule:
+    # Runs the script during US Regular Trading Hours (RTH) every 15 minutes
+    # US RTH is 14:30 to 21:00 UTC (9:30 AM to 4:00 PM EST/EDT)
+    # This cron runs from 13:30 to 21:00 UTC (covering daylight savings changes/buffers) Monday to Friday
+    - cron: '*/15 13-21 * * 1-5'
+  workflow_dispatch: # Allows manual testing in the GitHub UI
+
+permissions:
+  contents: write
+
+jobs:
+  check-limits:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Execute Monitoring Script
+        env:
+          ALPACA_API_KEY: ${{ secrets.ALPACA_API_KEY }}
+          ALPACA_SECRET_KEY: ${{ secrets.ALPACA_SECRET_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          # You can configure COOLDOWN_HOURS and BYPASS_MARKET_OPEN_CHECK here if desired.
+          # BYPASS_MARKET_OPEN_CHECK: 'False'
+          # COOLDOWN_HOURS: '2.0'
+        run: python monitor.py
+
+      - name: Commit and Push changes
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git add config.csv
+          if git diff --cached --quiet; then
+            echo "No changes to config.csv to commit."
+          else
+            git commit -m "Auto-update config.csv with latest market prices & trigger timestamps [skip ci]"
+            git push
+          fi
