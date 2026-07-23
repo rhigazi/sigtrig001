@@ -1,6 +1,6 @@
 # Alpaca US-Markt Limit-Überwachungssystem (Market Monitor)
 
-Ein performantes, stabile und kostengünstiges Überwachungssystem, das alle 15 Minuten während der US-Handelszeiten (RTH) die Kurse der in `config.csv` definierten Werte via **Alpaca Market API** prüft, Schwellenwert-Brüche (Ober-/Untergrenzen) identifiziert und **Telegram-Benachrichtigungen** verschickt.
+Ein performantes, stabiles und kostengünstiges Überwachungssystem, das alle 15 Minuten während der US-Handelszeiten (RTH) die Kurse der in `config.csv` definierten Werte via **Alpaca Market API** prüft, Schwellenwert-Brüche (Ober-/Untergrenzen) identifiziert und **Telegram-Benachrichtigungen** verschickt.
 
 Der aktuelle Zustand (letzter Preis & Auslösezeitpunkt) wird automatisch wieder in der Datei `config.csv` im Repository gespeichert.
 
@@ -104,11 +104,15 @@ python -m unittest test_monitor.py
 
 Der Workflow in `.github/workflows/market_monitor.yml` ist bereits so vorkonfiguriert, dass er alle 15 Minuten während der Handelszeiten startet und das geänderte `config.csv` automatisch committet und pusht.
 
-Solltest du das Ausführungsintervall oder die Stunden anpassen wollen, bearbeite einfach den `cron`-Ausdruck in der YAML-Datei:
+Die regulären US-Handelszeiten (RTH) sind von **09:30 bis 16:00 Uhr Eastern Time (ET)**.
+- Während der Sommerzeit (EDT, UTC-4) entspricht dies **13:30 bis 20:00 Uhr UTC**.
+- Während der Winterzeit (EST, UTC-5) entspricht dies **14:30 bis 21:00 Uhr UTC**.
+
+Der vordefinierte Cron-Job deckt mit dem Intervall **13:00 bis 21:00 UTC** ganzjährig alle Handelszeiten perfekt ab:
 ```yaml
 on:
   schedule:
-    # Jeden Tag Mo-Fr alle 15 Minuten von 13:30 bis 21:00 UTC
+    # Mo-Fr alle 15 Minuten zwischen 13:00 und 21:00 UTC (deckt ganzjährig 09:30-16:00 Uhr ET ab)
     - cron: '*/15 13-21 * * 1-5'
 ```
 Du kannst den Workflow auch jederzeit manuell im GitHub-Tab **Actions** über den Button **Run workflow** starten.
