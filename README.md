@@ -8,7 +8,7 @@ Der aktuelle Zustand (letzter Preis & Auslösezeitpunkt) wird automatisch wieder
 
 ## Funktionsweise & Features
 
-- **Automatisierte Ausführung:** Ein GitHub Actions Workflow führt das Skript alle 15 Minuten (Mo–Fr, 13:30 bis 21:00 UTC) aus.
+- **Automatisierte Ausführung:** Ein GitHub Actions Workflow führt das Skript alle 15 Minuten (Mo–Fr, 13:00 bis 21:00 UTC) aus, um die Handelszeiten ganzjährig abzudecken.
 - **Fehlertoleranz:** Scheitert das Laden eines Tickers bei Alpaca, erhältst du eine Warnung über Telegram, und andere Werte werden normal weitergeprüft.
 - **Alpaca Free-Plan Kompatibilität (IEX Feed):** Standardmäßig nutzt das Skript den **IEX**-Datenfeed (Investoren-Börse), welcher für kostenlose Alpaca-Konten (Free Plan / Paper Trading) freigeschaltet ist und keine `403 Forbidden` Fehler wirft. Bei bezahlten Konten kann flexibel auf den unlimitierten **SIP**-Feed umgestellt werden.
 - **Hysterese & Cooldown:** Um Spam-Nachrichten zu vermeiden, gibt es einen standardmäßigen **2-Stunden-Cooldown** pro Ticker (über `COOLDOWN_HOURS` einstellbar).
@@ -100,15 +100,21 @@ python -m unittest test_monitor.py
 
 ---
 
-## 4. GitHub Actions anpassen (Optional)
+## 4. GitHub Actions & Handelszeiten (Cron)
 
 Der Workflow in `.github/workflows/market_monitor.yml` ist bereits so vorkonfiguriert, dass er alle 15 Minuten während der Handelszeiten startet und das geänderte `config.csv` automatisch committet und pusht.
 
-Die regulären US-Handelszeiten (RTH) sind von **09:30 bis 16:00 Uhr Eastern Time (ET)**.
-- Während der Sommerzeit (EDT, UTC-4) entspricht dies **13:30 bis 20:00 Uhr UTC**.
-- Während der Winterzeit (EST, UTC-5) entspricht dies **14:30 bis 21:00 Uhr UTC**.
+### Genaue Aufschlüsselung der Börsenzeiten:
+Die **regulären US-Handelszeiten (RTH)** sind von **09:30 bis 16:00 Uhr Eastern Time (ET)**. Da GHA-Server standardmäßig in UTC laufen, verschieben sich die Zeiten wie folgt:
 
-Der vordefinierte Cron-Job deckt mit dem Intervall **13:00 bis 21:00 UTC** ganzjährig alle Handelszeiten perfekt ab:
+- **Sommerzeit (EDT, UTC-4):**
+  - Handelszeit: **13:30 bis 20:00 Uhr UTC**
+  - Deutsche Zeit (MESZ): **15:30 bis 22:00 Uhr** (da auch in Deutschland umgestellt wird)
+- **Winterzeit (EST, UTC-5):**
+  - Handelszeit: **14:30 bis 21:00 Uhr UTC**
+  - Deutsche Zeit (MEZ): **15:30 bis 22:00 Uhr** (da auch in Deutschland umgestellt wird)
+
+Der vordefinierte Cron-Job läuft ganzjährig im Intervall **13:00 bis 21:00 UTC** (Mo-Fr) alle 15 Minuten, womit die Handelszeiten zu jeder Jahreszeit lückenlos abgedeckt sind:
 ```yaml
 on:
   schedule:
