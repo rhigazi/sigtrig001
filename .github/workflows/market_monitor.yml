@@ -3,8 +3,10 @@ name: Alpaca Market Monitor
 on:
   schedule:
     # Runs the script during US Regular Trading Hours (RTH) every 15 minutes
-    # US RTH is 14:30 to 21:00 UTC (9:30 AM to 4:00 PM EST/EDT)
-    # This cron runs from 13:30 to 21:00 UTC (covering daylight savings changes/buffers) Monday to Friday
+    # US RTH is 09:30 to 16:00 US Eastern Time (EST/EDT)
+    # - In Daylight Saving Time (EDT, UTC-4), this is 13:30 to 20:00 UTC
+    # - In Standard Time (EST, UTC-5), this is 14:30 to 21:00 UTC
+    # The cron '*/15 13-21 * * 1-5' runs from 13:00 to 21:00 UTC Monday-Friday, covering all RTH periods year-round.
     - cron: '*/15 13-21 * * 1-5'
   workflow_dispatch: # Allows manual testing in the GitHub UI
 
