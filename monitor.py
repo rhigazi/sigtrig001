@@ -3,6 +3,7 @@ import csv
 import datetime
 import requests
 from dotenv import load_dotenv
+from zoneinfo import ZoneInfo
 
 from alpaca.data.historical import StockHistoricalDataClient
 from alpaca.data.requests import StockLatestTradeRequest
@@ -222,12 +223,20 @@ def run_monitor(config_path="config.csv"):
                     print(f"Cooldown active for {ticker}. Last alert was {elapsed_seconds / 60.0:.1f} minutes ago.")
 
             if should_alert:
+                # Convert timestamps to Eastern Time (ET) and German Time (MEZ/MESZ)
+                now_et = now_utc.astimezone(ZoneInfo("America/New_York"))
+                now_met = now_utc.astimezone(ZoneInfo("Europe/Berlin"))
+
+                tz_et_name = now_et.tzname() # e.g. "EDT" or "EST"
+                tz_met_name = "MESZ" if now_met.tzname() == "CEST" else "MEZ"
+
                 msg = (
                     f"🚨 *MARKET ALERT: {ticker}*\n\n"
                     f"Signal: *{signal_type}*\n"
                     f"Current Price: `${current_price:.2f}`\n"
                     f"Limit Triggered: `${limit_broken:.2f}`\n"
-                    f"Timestamp (UTC): `{now_utc.strftime('%Y-%m-%d %H:%M:%S')}`"
+                    f"Timestamp (ET): `{now_et.strftime('%Y-%m-%d %H:%M:%S')} {tz_et_name}`\n"
+                    f"Timestamp (DE): `{now_met.strftime('%Y-%m-%d %H:%M:%S')} {tz_met_name}`"
                 )
                 send_telegram_msg(msg, telegram_token, telegram_chat_id)
                 row["Last_Triggered"] = now_utc.strftime("%Y-%m-%dT%H:%M:%SZ")

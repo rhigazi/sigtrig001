@@ -130,6 +130,11 @@ class TestMonitor(unittest.TestCase):
         call_arg = mock_data_inst.get_stock_latest_trade.call_args[0][0]
         self.assertEqual(call_arg.feed, DataFeed.IEX)
 
+        # Verify message text format contains Timestamp (ET) and Timestamp (DE)
+        first_alert_msg = mock_send.call_args_list[0][0][0]
+        self.assertIn("Timestamp (ET):", first_alert_msg)
+        self.assertIn("Timestamp (DE):", first_alert_msg)
+
         # Verify rows was updated
         self.assertEqual(rows[0]["Last_Price"], "165.00")
         self.assertIsNotNone(rows[0]["Last_Triggered"])
