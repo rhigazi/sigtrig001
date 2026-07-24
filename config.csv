@@ -1,0 +1,4 @@
+Alarm_Name,Ticker,Lower_Limit,Upper_Limit,Active,Last_Triggered,Last_Price
+AAPL Support,AAPL,170.50,,TRUE,,
+AAPL Resistance,AAPL,,195.00,TRUE,,
+NVDA Breakout,NVDA,,135.00,TRUE,,
