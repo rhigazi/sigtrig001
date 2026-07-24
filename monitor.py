@@ -145,15 +145,15 @@ def run_monitor(config_path="config.csv"):
         print("BYPASS_MARKET_OPEN_CHECK is active. Skipping market clock check.")
 
     active_rows = []
-    active_tickers = []
+    active_tickers_list = []
     for idx, row in enumerate(rows):
         if parse_active(row.get("Active")):
             ticker = row.get("Ticker", "").strip()
             if ticker:
                 active_rows.append((idx, row))
-                active_tickers.append(ticker)
+                active_tickers_list.append(ticker)
 
-    if not active_tickers:
+    if not active_tickers_list:
         print("No active tickers found.")
         return
 
@@ -168,7 +168,9 @@ def run_monitor(config_path="config.csv"):
     else:
         feed = DataFeed.IEX
 
-    prices, failed_tickers = fetch_latest_trades(data_client, active_tickers, feed=feed)
+    # Fetch price only ONCE per ticker by creating a unique list
+    unique_tickers = list(set(active_tickers_list))
+    prices, failed_tickers = fetch_latest_trades(data_client, unique_tickers, feed=feed)
 
     for ticker in failed_tickers:
         err_msg = (
@@ -189,6 +191,8 @@ def run_monitor(config_path="config.csv"):
 
     for idx, row in active_rows:
         ticker = row.get("Ticker", "").strip()
+        alarm_name = row.get("Alarm_Name", "").strip() or "Unnamed Alarm"
+
         if ticker not in prices:
             continue
 
@@ -220,7 +224,7 @@ def run_monitor(config_path="config.csv"):
                 elapsed_seconds = (now_utc - last_triggered_dt).total_seconds()
                 if elapsed_seconds < (cooldown_hours * 3600.0):
                     should_alert = False
-                    print(f"Cooldown active for {ticker}. Last alert was {elapsed_seconds / 60.0:.1f} minutes ago.")
+                    print(f"Cooldown active for alarm '{alarm_name}' ({ticker}). Last alert was {elapsed_seconds / 60.0:.1f} minutes ago.")
 
             if should_alert:
                 # Convert timestamps to Eastern Time (ET) and German Time (MEZ/MESZ)
@@ -231,7 +235,8 @@ def run_monitor(config_path="config.csv"):
                 tz_met_name = "MESZ" if now_met.tzname() == "CEST" else "MEZ"
 
                 msg = (
-                    f"🚨 *MARKET ALERT: {ticker}*\n\n"
+                    f"🚨 *MARKET ALERT: {ticker}*\n"
+                    f"Alarm Name: *{alarm_name}*\n\n"
                     f"Signal: *{signal_type}*\n"
                     f"Current Price: `${current_price:.2f}`\n"
                     f"Limit Triggered: `${limit_broken:.2f}`\n"

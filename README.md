@@ -9,9 +9,11 @@ Der aktuelle Zustand (letzter Preis & Auslösezeitpunkt) wird automatisch wieder
 ## Funktionsweise & Features
 
 - **Automatisierte Ausführung:** Ein GitHub Actions Workflow führt das Skript alle 15 Minuten (Mo–Fr, 13:00 bis 21:00 UTC) aus, um die Handelszeiten ganzjährig abzudecken.
+- **Mehrere Alarme pro Ticker:** Du kannst denselben Ticker mehrfach in `config.csv` anlegen (z. B. einen Alarm für Support und einen für Resistance) mit unterschiedlichen Limits und Namen.
+- **Effiziente API-Abfrage (Batch):** Unabhängig davon, wie viele Alarme du pro Aktie definiert hast, wird der Kurs für jedes Aktiensymbol **exakt einmal** von Alpaca per Batch-Abfrage geladen. Dies schont deine API-Quoten.
 - **Fehlertoleranz:** Scheitert das Laden eines Tickers bei Alpaca, erhältst du eine Warnung über Telegram, und andere Werte werden normal weitergeprüft.
 - **Alpaca Free-Plan Kompatibilität (IEX Feed):** Standardmäßig nutzt das Skript den **IEX**-Datenfeed (Investoren-Börse), welcher für kostenlose Alpaca-Konten (Free Plan / Paper Trading) freigeschaltet ist und keine `403 Forbidden` Fehler wirft. Bei bezahlten Konten kann flexibel auf den unlimitierten **SIP**-Feed umgestellt werden.
-- **Hysterese & Cooldown:** Um Spam-Nachrichten zu vermeiden, gibt es einen standardmäßigen **2-Stunden-Cooldown** pro Ticker (über `COOLDOWN_HOURS` einstellbar).
+- **Hysterese & Cooldown:** Um Spam-Nachrichten zu vermeiden, gibt es einen standardmäßigen **2-Stunden-Cooldown** pro Alarm (über `COOLDOWN_HOURS` einstellbar).
 - **Zustands-Synchronisierung:** Letzte Kurse (`Last_Price`) und Alarm-Zeitstempel (`Last_Triggered`) werden zurück ins Repository gepusht.
 - **Wochenend-Schutz:** Das Skript bricht außerhalb der US-Marktzeiten automatisch ab, um API-Abfragen zu sparen.
 
@@ -19,22 +21,24 @@ Der aktuelle Zustand (letzter Preis & Auslösezeitpunkt) wird automatisch wieder
 
 ## 1. Konfiguration (`config.csv`)
 
-Die Konfiguration der Aktien und Limits erfolgt direkt in der Datei `config.csv` im Repository:
+Die Konfiguration der Aktien und Limits erfolgt direkt in der Datei `config.csv` im Repository. Du kannst beliebig viele Zeilen für denselben Ticker hinzufügen:
 
 | Spalte | Beschreibung |
 |---|---|
+| **Alarm_Name** | Ein eindeutiger Name für den spezifischen Alarm (z. B. `AAPL Support`, `AAPL Breakout`). Dieser Name wird in der Telegram-Nachricht mitgesendet. |
 | **Ticker** | Das Aktiensymbol (z. B. `AAPL`, `NVDA`). |
 | **Lower_Limit** | Die Untergrenze. Fällt der Kurs darunter oder darauf, wird alarmiert. (Kann leer gelassen werden). |
 | **Upper_Limit** | Die Obergrenze. Steigt der Kurs darüber oder darauf, wird alarmiert. (Kann leer gelassen werden). |
-| **Active** | `TRUE` oder `FALSE` (Aktiviert oder deaktiviert die Prüfung für diesen Wert). |
+| **Active** | `TRUE` oder `FALSE` (Aktiviert oder deaktiviert die Prüfung für diesen spezifischen Alarm). |
 | **Last_Triggered** | *(Wird automatisch befüllt)* Zeitstempel des letzten Alarms (UTC). |
 | **Last_Price** | *(Wird automatisch befüllt)* Zuletzt abgefragter Kurs. |
 
 **Beispiel `config.csv`:**
 ```csv
-Ticker,Lower_Limit,Upper_Limit,Active,Last_Triggered,Last_Price
-AAPL,170.50,195.00,TRUE,,
-NVDA,110.00,135.00,TRUE,,
+Alarm_Name,Ticker,Lower_Limit,Upper_Limit,Active,Last_Triggered,Last_Price
+AAPL Support,AAPL,170.50,,TRUE,,
+AAPL Resistance,AAPL,,195.00,TRUE,,
+NVDA Breakout,NVDA,,135.00,TRUE,,
 ```
 
 ---

@@ -59,7 +59,7 @@ class TestMonitor(unittest.TestCase):
     def test_run_monitor_market_closed(self, mock_is_market_open, mock_send, mock_save, mock_load, mock_hist, mock_trade):
         mock_is_market_open.return_value = False
         rows = [
-            {"Ticker": "AAPL", "Lower_Limit": "170.50", "Upper_Limit": "195.00", "Active": "TRUE", "Last_Triggered": "", "Last_Price": ""}
+            {"Alarm_Name": "AAPL Lower", "Ticker": "AAPL", "Lower_Limit": "170.50", "Upper_Limit": "195.00", "Active": "TRUE", "Last_Triggered": "", "Last_Price": ""}
         ]
         mock_load.return_value = (rows, list(rows[0].keys()))
 
@@ -87,11 +87,12 @@ class TestMonitor(unittest.TestCase):
     def test_run_monitor_market_open_with_alerts(self, mock_is_market_open, mock_send, mock_save, mock_load, mock_hist, mock_trade):
         mock_is_market_open.return_value = True
 
-        # Setup config
+        # Setup config with multiple alarms for AAPL
         rows = [
-            {"Ticker": "AAPL", "Lower_Limit": "170.50", "Upper_Limit": "195.00", "Active": "TRUE", "Last_Triggered": "", "Last_Price": ""},
-            {"Ticker": "NVDA", "Lower_Limit": "110.00", "Upper_Limit": "135.00", "Active": "TRUE", "Last_Triggered": "", "Last_Price": ""},
-            {"Ticker": "TSLA", "Lower_Limit": "150.00", "Upper_Limit": "250.00", "Active": "FALSE", "Last_Triggered": "", "Last_Price": ""}
+            {"Alarm_Name": "AAPL Support", "Ticker": "AAPL", "Lower_Limit": "170.50", "Upper_Limit": "", "Active": "TRUE", "Last_Triggered": "", "Last_Price": ""},
+            {"Alarm_Name": "AAPL Resistance", "Ticker": "AAPL", "Lower_Limit": "", "Upper_Limit": "195.00", "Active": "TRUE", "Last_Triggered": "", "Last_Price": ""},
+            {"Alarm_Name": "NVDA High", "Ticker": "NVDA", "Lower_Limit": "110.00", "Upper_Limit": "135.00", "Active": "TRUE", "Last_Triggered": "", "Last_Price": ""},
+            {"Alarm_Name": "TSLA High", "Ticker": "TSLA", "Lower_Limit": "150.00", "Upper_Limit": "250.00", "Active": "FALSE", "Last_Triggered": "", "Last_Price": ""}
         ]
         mock_load.return_value = (rows, list(rows[0].keys()))
 
@@ -100,7 +101,7 @@ class TestMonitor(unittest.TestCase):
         mock_hist.return_value = mock_data_inst
 
         trade_aapl = MagicMock()
-        trade_aapl.price = 165.0  # AAPL: Lower limit breached (165.0 <= 170.50)
+        trade_aapl.price = 165.0  # AAPL: Lower limit breached (165.0 <= 170.50), but upper limit (195) is not breached
 
         trade_nvda = MagicMock()
         trade_nvda.price = 140.0  # NVDA: Upper limit breached (140.0 >= 135.00)
@@ -126,22 +127,30 @@ class TestMonitor(unittest.TestCase):
         mock_is_market_open.assert_called_once()
         self.assertEqual(mock_send.call_count, 2)
 
-        # Verify that get_stock_latest_trade was called with feed=DataFeed.IEX
+        # Verify that get_stock_latest_trade was called with unique tickers (not requesting AAPL twice)
         call_arg = mock_data_inst.get_stock_latest_trade.call_args[0][0]
         self.assertEqual(call_arg.feed, DataFeed.IEX)
+        self.assertEqual(set(call_arg.symbol_or_symbols), {"AAPL", "NVDA"})
+        self.assertEqual(len(call_arg.symbol_or_symbols), 2)
 
-        # Verify message text format contains Timestamp (ET) and Timestamp (DE)
+        # Verify message text format contains Alarm Name, Timestamp (ET) and Timestamp (DE)
         first_alert_msg = mock_send.call_args_list[0][0][0]
+        self.assertIn("Alarm Name: *AAPL Support*", first_alert_msg)
         self.assertIn("Timestamp (ET):", first_alert_msg)
         self.assertIn("Timestamp (DE):", first_alert_msg)
 
         # Verify rows was updated
         self.assertEqual(rows[0]["Last_Price"], "165.00")
         self.assertIsNotNone(rows[0]["Last_Triggered"])
-        self.assertEqual(rows[1]["Last_Price"], "140.00")
-        self.assertIsNotNone(rows[1]["Last_Triggered"])
+        self.assertEqual(rows[1]["Last_Price"], "165.00")
+        # Second AAPL alarm upper limit is 195, price 165 did not trigger it
+        self.assertEqual(rows[1]["Last_Triggered"], "")
+
+        self.assertEqual(rows[2]["Last_Price"], "140.00")
+        self.assertIsNotNone(rows[2]["Last_Triggered"])
+
         # TSLA is inactive, so no price or last_triggered update
-        self.assertEqual(rows[2]["Last_Price"], "")
+        self.assertEqual(rows[3]["Last_Price"], "")
 
         # Verify mock_save was called
         mock_save.assert_called_once()
@@ -158,7 +167,7 @@ class TestMonitor(unittest.TestCase):
         thirty_mins_ago_str = thirty_mins_ago.strftime("%Y-%m-%dT%H:%M:%SZ")
 
         rows = [
-            {"Ticker": "AAPL", "Lower_Limit": "170.50", "Upper_Limit": "195.00", "Active": "TRUE", "Last_Triggered": thirty_mins_ago_str, "Last_Price": ""}
+            {"Alarm_Name": "AAPL Support", "Ticker": "AAPL", "Lower_Limit": "170.50", "Upper_Limit": "195.00", "Active": "TRUE", "Last_Triggered": thirty_mins_ago_str, "Last_Price": ""}
         ]
         mock_load.return_value = (rows, list(rows[0].keys()))
 
@@ -204,7 +213,7 @@ class TestMonitor(unittest.TestCase):
         three_hours_ago_str = three_hours_ago.strftime("%Y-%m-%dT%H:%M:%SZ")
 
         rows = [
-            {"Ticker": "AAPL", "Lower_Limit": "170.50", "Upper_Limit": "195.00", "Active": "TRUE", "Last_Triggered": three_hours_ago_str, "Last_Price": ""}
+            {"Alarm_Name": "AAPL Support", "Ticker": "AAPL", "Lower_Limit": "170.50", "Upper_Limit": "195.00", "Active": "TRUE", "Last_Triggered": three_hours_ago_str, "Last_Price": ""}
         ]
         mock_load.return_value = (rows, list(rows[0].keys()))
 
@@ -239,7 +248,7 @@ class TestMonitor(unittest.TestCase):
     @patch("monitor.send_telegram_msg")
     def test_run_monitor_failed_ticker(self, mock_send, mock_save, mock_load, mock_hist, mock_trade):
         rows = [
-            {"Ticker": "INVALID_TICKER", "Lower_Limit": "170.50", "Upper_Limit": "195.00", "Active": "TRUE", "Last_Triggered": "", "Last_Price": ""}
+            {"Alarm_Name": "AAPL Support", "Ticker": "INVALID_TICKER", "Lower_Limit": "170.50", "Upper_Limit": "195.00", "Active": "TRUE", "Last_Triggered": "", "Last_Price": ""}
         ]
         mock_load.return_value = (rows, list(rows[0].keys()))
 

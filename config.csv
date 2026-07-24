@@ -1,3 +1,4 @@
-Ticker,Lower_Limit,Upper_Limit,Active,Last_Triggered,Last_Price
-DIA,514,516.00,TRUE,2026-07-24T13:31:00Z,519.97
-AMZN,232.11,235.17,TRUE,2026-07-24T14:30:59Z,232.97
+Alarm_Name,Ticker,Lower_Limit,Upper_Limit,Active,Last_Triggered,Last_Price
+AAPL Support,AAPL,170.50,,TRUE,,
+AAPL Resistance,AAPL,,195.00,TRUE,,
+NVDA Breakout,NVDA,,135.00,TRUE,,
